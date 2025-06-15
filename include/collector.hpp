@@ -1,15 +1,15 @@
 #ifndef COLLECTOR_HPP_
 #define COLLECTOR_HPP_
 
-#include "metric.hpp"
-#include <memory>
-#include <vector>
-#include <string>
-#include <mutex>
-#include <fstream>
-#include <sstream>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <string>
+#include <vector>
+#include "metric.hpp"
 
 namespace metrics {
 
@@ -18,16 +18,15 @@ public:
     MetricsCollector() = default;
 
     void register_metric(std::shared_ptr<Metric> metric);
-    void flush(const std::string& filename);
+    void flush(const std::string &filename);
 
 private:
-
     std::string current_timestamp();
 
     mutable std::mutex mutex_;
     std::vector<std::shared_ptr<Metric>> metrics_;
 };
 
-} // namespace metrics
+}  // namespace metrics
 
 #endif

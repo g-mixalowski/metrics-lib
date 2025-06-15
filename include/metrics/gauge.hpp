@@ -1,91 +1,126 @@
 #ifndef GAUGE_HPP_
 #define GAUGE_HPP_
 
-#include "metric.hpp"
 #include <memory>
+#include "metric.hpp"
 
 namespace metrics {
 
 template <typename N = uint64_t, typename A = std::atomic<N>>
 class Gauge : public Metric {
 public:
-    Gauge(std::string name) : name_(name), inner_(std::make_shared<A>()) {}
+    Gauge(const char *name) noexcept
+        : name_(name), inner_(std::make_shared<A>()) {
+    }
 
-    N inc() {
+    template <
+        typename S,
+        typename = std::enable_if_t<std::is_convertible_v<S, std::string>>>
+    Gauge(S &&name)
+        : name_(std::forward<S>(name)), inner_(std::make_shared<A>()) {
+    }
+
+    Gauge(const Gauge &) = default;
+    Gauge(Gauge &&) = default;
+    Gauge &operator=(const Gauge &) = default;
+    Gauge &operator=(Gauge &&) = default;
+
+    N inc() noexcept {
         return inc_by(N{1});
     }
 
-    N inc_by(N v) {
+    N inc_by(N v) noexcept {
         return inner_->fetch_add(v, std::memory_order_relaxed);
     }
 
-    N dec() {
+    N dec() noexcept {
         return dec_by(N{1});
     }
 
-    N dec_by(N v) {
+    N dec_by(N v) noexcept {
         return inner_->fetch_sub(v, std::memory_order_relaxed);
     }
 
-    N set(N v) {
-        return *inner_->store(v);
+    N set(N v) noexcept {
+        inner_->store(v);
+        return *inner_;
     }
 
-    N get() const {
+    N get() const noexcept {
         return inner_->load(std::memory_order_relaxed);
     }
 
-    std::shared_ptr<A> inner() const {
+    std::shared_ptr<A> inner() const noexcept {
         return inner_;
     }
 
-    std::string name() const override {
+    std::string_view name() const noexcept override {
         return name_;
     }
 
     std::string value_as_str() const override {
-        std::ostringstream oss;
-        oss << *inner_;
-        return oss.str();
+        if constexpr (std::is_arithmetic_v<N>) {
+            return std::to_string(get());
+        } else {
+            std::ostringstream oss;
+            oss << get();
+            return std::move(oss).str();
+        }
     }
 
-    void reset() override {
-        set(N{});
+    void reset() noexcept override {
+        inner_->store(N{}, std::memory_order_relaxed);
     }
 
 private:
-    std::string name_;
+    const std::string name_;
     std::shared_ptr<A> inner_;
 };
 
 template <typename N = uint64_t>
 class ConstGauge : public Metric {
 public:
-    explicit ConstGauge(std::string name, N value) : name_(name), value_(value) {}
-    
-    N get() const { 
-        return value_; 
-    }    
-    
-    std::string name() const {
+    template <
+        typename S,
+        typename V,
+        typename = std::enable_if_t<std::is_convertible_v<S, std::string>>,
+        typename = std::enable_if_t<std::is_convertible_v<V, N>>>
+    explicit ConstGauge(S &&name, V &&value)
+        : name_(std::forward<S>(name)), value_(std::forward<V>(value)) {
+    }
+
+    ConstGauge(const ConstGauge &) = default;
+    ConstGauge(ConstGauge &&) = default;
+    ConstGauge &operator=(const ConstGauge &) = default;
+    ConstGauge &operator=(ConstGauge &&) = default;
+
+    N get() const noexcept {
+        return value_;
+    }
+
+    std::string_view name() const noexcept override {
         return name_;
     }
 
-    std::string value_as_str() const {
-        std::ostringstream oss;
-        oss << *value_;
-        return oss.str();
+    std::string value_as_str() const override {
+        if constexpr (std::is_arithmetic_v<N>) {
+            return std::to_string(get());
+        } else {
+            std::ostringstream oss;
+            oss << get();
+            return std::move(oss).str();
+        }
     }
 
-    void reset() {
+    void reset() noexcept override {
         return;
     }
 
 private:
-    std::string name_;
-    N value_;
+    const std::string name_;
+    const N value_;
 };
 
-}
+}  // namespace metrics
 
 #endif
