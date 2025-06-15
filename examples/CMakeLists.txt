@@ -1,0 +1,5 @@
+add_executable(basic_example basic_example.cpp)
+target_link_libraries(basic_example PRIVATE metrics)
+
+add_executable(system_monitor system_monitor.cpp)
+target_link_libraries(system_monitor PRIVATE metrics)
