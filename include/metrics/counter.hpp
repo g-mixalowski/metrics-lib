@@ -1,7 +1,6 @@
 #ifndef COUNTER_HPP
 #define COUNTER_HPP
 
-#include <iostream>
 #include <memory>
 #include <string_view>
 #include <type_traits>
